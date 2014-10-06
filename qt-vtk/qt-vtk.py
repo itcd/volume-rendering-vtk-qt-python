@@ -39,7 +39,7 @@ def CaptureImage(renWin):
     writer.SetFileName(filename)
     renWin.Render()
     writer.Write()
-    
+
 def check_gl_version_supported(renWin):
     extensions = vtk.vtkOpenGLExtensionManager()
     extensions.SetRenderWindow(renWin)
