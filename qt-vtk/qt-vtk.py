@@ -22,7 +22,7 @@ def get_image_filename():
     return filename
 
 def get_volume_filename():
-    filename = QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a volume data set', '', "UNC MetaImage (*.mhd *.mha);; All Files (*)")
+    filename = str(QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a volume data set', '../data', "UNC MetaImage (*.mhd *.mha);; All Files (*)"))
     if len(filename ) < 1:
         filename = "../data/nucleon.mhd"
     return filename
@@ -52,7 +52,7 @@ def check_gl_version_supported(renWin):
     print "GL_VERSION_3_0", extensions.ExtensionSupported("GL_VERSION_3_0")    
 
 def load_transfer_function():
-    filename = QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a transfer function', '', "Voreen transfer functions (*.tfi);; All Files (*)")
+    filename = str(QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a transfer function', '../transfer_function', "Voreen transfer functions (*.tfi);; All Files (*)"))
     if len(filename ) < 1:
         filename = "../transferfuncs/nucleon.tfi"
         
