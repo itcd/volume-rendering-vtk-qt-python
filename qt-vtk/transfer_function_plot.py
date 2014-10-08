@@ -1,6 +1,7 @@
 """
-http://stackoverflow.com/questions/20130227/matplotlib-connect-scatterplot-points-with-line-python
+http://matplotlib.org/examples/shapes_and_collections/scatter_demo.html
 http://nbviewer.ipython.org/github/dpsanders/matplotlib-examples/blob/master/colorline.ipynb
+http://stackoverflow.com/questions/20130227/matplotlib-connect-scatterplot-points-with-line-python
 """
 
 import sys
@@ -65,22 +66,6 @@ def load_transfer_function():
 
     return opacityTransferFunction, colorTransferFunction
 
-
-#ts = pd.Series(np.random.randn(1000), index=pd.date_range('1/1/2000', periods=1000))
-#ts = ts.cumsum()
-#ts.plot()
-
-#import matplotlib.pyplot as plt
-#from numpy.random import normal
-#gaussian_numbers = normal(size=1000)
-##plt.hist(gaussian_numbers)
-##plt.hist(gaussian_numbers, bins=100)
-#plt.hist(gaussian_numbers, bins=100, normed=True)
-#plt.title("Gaussian Histogram")
-#plt.xlabel("Value")
-#plt.ylabel("Frequency")
-#plt.show()
-
 def plot_tf(opacityTransferFunction, colorTransferFunction):
     v4 = [0] * 4
     v6 = [0] * 6
@@ -95,15 +80,14 @@ def plot_tf(opacityTransferFunction, colorTransferFunction):
         opacity_list.append(v4[1])
         color_list.append([v6[1], v6[2], v6[3]])
     
-    print intensity_list
-    print opacity_list
-    print color_list
-    
     x = intensity_list
     y = opacity_list
     colors = color_list
     area = [15**2] * N
     #area = (10 + np.linspace(0,10,N))**2 # 0 to 15 point radiuses
+    plt.title("Transfer Function")
+    plt.xlabel("Intensity")
+    plt.ylabel("Opacity")
     plt.scatter(x, y, s=area, color=colors, alpha=0.5)
     plt.plot(x, y, '-o', color=[.6,.6,.6])
     plt.show()

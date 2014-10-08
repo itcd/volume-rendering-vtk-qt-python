@@ -14,7 +14,6 @@ import xml.etree.ElementTree as ET
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import QTimer
 from PyQt4.QtGui import QApplication, QMessageBox
-import numpy as np
 import matplotlib.pyplot as plt
 
 def get_image_filename():
@@ -117,15 +116,13 @@ def plot_tf(opacityTransferFunction, colorTransferFunction):
         opacity_list.append(v4[1])
         color_list.append([v6[1], v6[2], v6[3]])
     
-    print intensity_list
-    print opacity_list
-    print color_list
-    
     x = intensity_list
     y = opacity_list
     colors = color_list
     area = [15**2] * N
-    #area = (10 + np.linspace(0,10,N))**2 # 0 to 15 point radiuses
+    plt.title("Transfer Function")
+    plt.xlabel("Intensity")
+    plt.ylabel("Opacity")
     plt.scatter(x, y, s=area, color=colors, alpha=0.5)
     plt.plot(x, y, '-o', color=[.6,.6,.6])
     plt.show()
