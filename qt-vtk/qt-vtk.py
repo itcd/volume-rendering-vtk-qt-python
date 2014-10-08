@@ -14,6 +14,8 @@ import xml.etree.ElementTree as ET
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import QTimer
 from PyQt4.QtGui import QApplication, QMessageBox
+import numpy as np
+import matplotlib.pyplot as plt
 
 def get_image_filename():
     #if len(filename) < 1:
@@ -101,6 +103,33 @@ def load_transfer_function():
 
     return opacityTransferFunction, colorTransferFunction
 
+def plot_tf(opacityTransferFunction, colorTransferFunction):
+    v4 = [0] * 4
+    v6 = [0] * 6
+    color_list = []
+    opacity_list = []
+    intensity_list = []
+    N = colorTransferFunction.GetSize()
+    for i in range(N):
+        colorTransferFunction.GetNodeValue(i, v6)
+        opacityTransferFunction.GetNodeValue(i, v4)
+        intensity_list.append(v4[0])
+        opacity_list.append(v4[1])
+        color_list.append([v6[1], v6[2], v6[3]])
+    
+    print intensity_list
+    print opacity_list
+    print color_list
+    
+    x = intensity_list
+    y = opacity_list
+    colors = color_list
+    area = [15**2] * N
+    #area = (10 + np.linspace(0,10,N))**2 # 0 to 15 point radiuses
+    plt.scatter(x, y, s=area, color=colors, alpha=0.5)
+    plt.plot(x, y, '-o', color=[.6,.6,.6])
+    plt.show()
+    
 class MyMainWindow(QtCore.QObject):
     def __init__(self):
         QtCore.QObject.__init__(self)
@@ -124,6 +153,7 @@ class MyMainWindow(QtCore.QObject):
         
         volume_filename = get_volume_filename()
         opacityTransferFunction, colorTransferFunction = load_transfer_function()
+        plot_tf(opacityTransferFunction, colorTransferFunction)
         
         # Create the reader for the data
         reader = vtk.vtkMetaImageReader()
@@ -163,5 +193,5 @@ if __name__ == "__main__":
     print sys.argv[0]
     print __file__
     app = QtGui.QApplication(sys.argv)
-    window = MyMainWindow()
+    window = MyMainWindow() 
     sys.exit(app.exec_())
