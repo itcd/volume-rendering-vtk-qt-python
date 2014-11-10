@@ -91,8 +91,8 @@ class MyMainWindow(QtCore.QObject):
         
         # for vtkGPUVolumeRayCastMapper
         volumeMapper = vtk.vtkGPUVolumeRayCastMapper()
-        volumeMapper.SetInputConnection(reader.GetOutputPort())        
-
+        volumeMapper.SetInputConnection(reader.GetOutputPort())
+        
         # The volume holds the mapper and the property and
         # can be used to position/orient the volume
         volume = vtk.vtkVolume()
