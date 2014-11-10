@@ -84,14 +84,13 @@ def plot_tf(opacityTransferFunction, colorTransferFunction):
     y = opacity_list
     colors = color_list
     area = [15**2] * N
-    #area = (10 + np.linspace(0,10,N))**2 # 0 to 15 point radiuses
     plt.title("Transfer Function")
     plt.xlabel("Intensity")
     plt.ylabel("Opacity")
     plt.scatter(x, y, s=area, color=colors, alpha=0.5)
     plt.plot(x, y, '-o', color=[.6,.6,.6])
     plt.show()
-    
+
 if __name__ == "__main__":
     print sys.argv[0]
     print __file__
