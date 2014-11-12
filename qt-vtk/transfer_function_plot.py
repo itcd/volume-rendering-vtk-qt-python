@@ -16,11 +16,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-def load_transfer_function():
-    filename = str(QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a transfer function', '../transfer_function', "Voreen transfer functions (*.tfi);; All Files (*)"))
-    if len(filename ) < 1:
-        filename = "../transferfuncs/nucleon.tfi"
-        
+def load_transfer_function_by_filename(filename):
     tree = ET.parse(filename)
     root = tree.getroot()
     
@@ -47,7 +43,7 @@ def load_transfer_function():
         list_g.append(colour.get("g"))
         list_b.append(colour.get("b"))
         list_a.append(colour.get("a"))
-
+    
     # Create transfer mapping scalar value to opacity
     opacityTransferFunction = vtk.vtkPiecewiseFunction()
      
@@ -63,8 +59,15 @@ def load_transfer_function():
         a = float(list_a[i]) / max_intensity
         opacityTransferFunction.AddPoint(intensity, a)
         colorTransferFunction.AddRGBPoint(intensity, r, g, b)
-
+    
     return opacityTransferFunction, colorTransferFunction
+
+def load_transfer_function(filename = None):
+    if filename is None:
+        filename = str(QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a transfer function', '../transfer_function', "Voreen transfer functions (*.tfi);; All Files (*)"))
+        if len(filename ) < 1:
+            filename = "../transferfuncs/nucleon.tfi"
+    return load_transfer_function_by_filename(filename)
 
 def plot_tf(opacityTransferFunction, colorTransferFunction):
     v4 = [0] * 4
@@ -84,11 +87,13 @@ def plot_tf(opacityTransferFunction, colorTransferFunction):
     y = opacity_list
     colors = color_list
     area = [15**2] * N
+    plt.clf()
     plt.title("Transfer Function")
     plt.xlabel("Intensity")
     plt.ylabel("Opacity")
     plt.scatter(x, y, s=area, color=colors, alpha=0.5)
     plt.plot(x, y, '-o', color=[.6,.6,.6])
+    plt.draw()
     plt.show()
 
 if __name__ == "__main__":

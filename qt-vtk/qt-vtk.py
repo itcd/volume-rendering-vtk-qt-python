@@ -23,10 +23,11 @@ def get_image_filename():
     filename = "../~image.png"
     return filename
 
-def get_volume_filename():
-    filename = str(QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a volume data set', '../data', "UNC MetaImage (*.mhd *.mha);; All Files (*)"))
-    if len(filename ) < 1:
-        filename = "../data/nucleon.mhd"
+def get_volume_filename(filename = None):
+    if filename is None:
+	filename = str(QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a volume data set', '../data', "UNC MetaImage (*.mhd *.mha);; All Files (*)"))
+	if len(filename ) < 1:
+	    filename = "../data/nucleon.mhd"
     return filename
 
 # Capture the display and place in a tiff
@@ -68,8 +69,8 @@ class MyMainWindow(QtGui.QMainWindow):
         self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
         self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()   
         
-        volume_filename = get_volume_filename()
-        opacityTransferFunction, colorTransferFunction = load_transfer_function()
+	volume_filename = get_volume_filename("../data/nucleon.mhd")
+        opacityTransferFunction, colorTransferFunction = load_transfer_function("../transferfuncs/nucleon.tfi")
         plot_tf(opacityTransferFunction, colorTransferFunction)
         
         # Create the reader for the data
@@ -91,7 +92,7 @@ class MyMainWindow(QtGui.QMainWindow):
         # can be used to position/orient the volume
         volume = vtk.vtkVolume()
         volume.SetMapper(volumeMapper)
-        volume.SetProperty(volumeProperty)        
+        volume.SetProperty(volumeProperty)
 
         self.ren.AddVolume(volume)
         self.ren.SetBackground(1, 1, 1)
@@ -110,48 +111,33 @@ class MyMainWindow(QtGui.QMainWindow):
     def on_pushButton_clicked(self):
         print "on_pushButton_clicked"
         
-        foods = [
-            'Cookie dough', # Must be store-bought
-            'Hummus', # Must be homemade
-            'Spaghetti', # Must be saucy
-            'Dal makhani', # Must be spicy
-            'Chocolate whipped cream' # Must be plentiful
-        ]
+        path, ok = QtGui.QInputDialog.getText(self.ui, 'Input Dialog', 'Enter path of data set:', QtGui.QLineEdit.Normal, r'D:\_uchar\vortex')
+        if ok:
+            print path
+        
+        self.path = str(path)
+
+        dir = QtCore.QDir(path)
+        files = dir.entryList(['*.mhd'], QtCore.QDir.Files | QtCore.QDir.NoSymLinks)
+   
+        file_list = map(str, files)
+        print len(file_list)
+        print file_list
         
         list1 = []
-        for food in foods:
+        for filename in file_list:
             # Create an item with a caption
-            item = QtGui.QStandardItem(food)
-         
-            # Add a checkbox to it
-            item.setCheckable(True)
-         
-            # Add the item to the model
-            #model.appendRow(item)
+            item = QtGui.QStandardItem(filename)
             list1.append(item)
         
-        model = QtGui.QStandardItemModel()
-        model.clear()
-        model.appendColumn(list1)
-        self.ui.listView.setModel(model)
+        self.model = QtGui.QStandardItemModel()
+        self.model.clear()
+        self.model.appendColumn(list1)
+        self.ui.listView.setModel(self.model)
 
     @pyqtSlot(int)
     def on_horizontalSlider_valueChanged(self, value):
         print "on_horizontalSlider_valueChanged", value
-
-    @pyqtSlot()
-    def on_actionOpen_path_triggered(self):
-        print "on_actionOpen_path_triggered"
-        
-        text, ok = QtGui.QInputDialog.getText(self.ui, 'Input Dialog', 'Enter path of data set:', QtGui.QLineEdit.Normal, 'E:/QQDownload')
-        if ok:
-            print text
-            
-        filename = text
-        dir = QtCore.QDir(filename)
-        files = dir.entryList(['*.exe'], QtCore.QDir.Files | QtCore.QDir.NoSymLinks)
-        print len(files)
-        print map(str, files)
 
     @pyqtSlot()
     def on_actionAbout_triggered(self):
@@ -162,7 +148,78 @@ class MyMainWindow(QtGui.QMainWindow):
     def on_actionExit_triggered(self):
         print "on_actionExit_triggered"
         self.ui.close()
-        QtGui.QApplication.quit()        
+        QtGui.QApplication.quit()
+
+    @pyqtSlot('QModelIndex')
+    def on_listView_activated(self, index):
+        print 'on_listView_activated'
+
+    def append_path_separator(self, text):
+        result_string = text
+        separator1 = '/'
+        separator2 = '\\'
+        index1 = result_string.rfind(separator1)
+        index2 = result_string.rfind(separator2)
+        if index2 == -1:
+            separator = separator1
+        else:
+            separator = separator2
+        if index1 == -1 and index2 == -1:
+            result_string = result_string + separator
+        else:
+            index = max(index1, index2)
+            if index < len(result_string) - 1:
+                result_string = result_string + separator
+        #print index1, index2, result_string
+        return result_string
+
+    @pyqtSlot('QModelIndex')
+    def on_listView_clicked(self, index):
+        print 'on_listView_clicked'
+        item = str(self.model.itemFromIndex(index).text())
+	path = self.append_path_separator(self.path)
+        volume_filename = path + item
+	tf_filename = path + item.replace('.mhd', '.tfi')
+        print volume_filename, tf_filename
+        self.ui.setWindowTitle(volume_filename)
+	
+        opacityTransferFunction, colorTransferFunction = load_transfer_function(tf_filename)
+        plot_tf(opacityTransferFunction, colorTransferFunction)	
+  
+        # Create the reader for the data
+        reader = vtk.vtkMetaImageReader()
+        reader.SetFileName(volume_filename)
+	
+        # The property describes how the data will look
+        volumeProperty = vtk.vtkVolumeProperty()
+        volumeProperty.SetColor(colorTransferFunction)
+        volumeProperty.SetScalarOpacity(opacityTransferFunction)
+        volumeProperty.ShadeOn()
+        volumeProperty.SetInterpolationTypeToLinear()
+	
+        # for vtkGPUVolumeRayCastMapper
+        volumeMapper = vtk.vtkGPUVolumeRayCastMapper()
+        volumeMapper.SetInputConnection(reader.GetOutputPort())
+        
+        # The volume holds the mapper and the property and
+        # can be used to position/orient the volume
+        volume = vtk.vtkVolume()
+        volume.SetMapper(volumeMapper)
+        volume.SetProperty(volumeProperty)
+	
+	self.ren = vtk.vtkRenderer()
+	self.ren.AddVolume(volume)
+	self.ren.SetBackground(1, 1, 1)
+	
+	window = self.vtkWidget.GetRenderWindow()
+	collection = window.GetRenderers()
+	item = collection.GetNextItem()
+	while item is not None:
+	    window.RemoveRenderer(item)
+	    item = collection.GetNextItem()
+	window.AddRenderer(self.ren)
+	window.Render()
+	self.iren.Initialize()
 
 if __name__ == "__main__":
     print sys.argv[0]
