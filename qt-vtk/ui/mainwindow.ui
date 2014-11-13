@@ -62,11 +62,21 @@
    <widget class="QWidget" name="dockWidgetContents">
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
-      <widget class="QPushButton" name="pushButton">
-       <property name="text">
-        <string>load files from path...</string>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <property name="leftMargin">
+        <number>0</number>
        </property>
-      </widget>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QPushButton" name="loadDataButton">
+         <property name="text">
+          <string>load files from path...</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
       <widget class="QListView" name="listView"/>
@@ -80,6 +90,20 @@
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_2">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QPushButton" name="toNumpyButton">
+       <property name="text">
+        <string>to numpy</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="captureImageButton">
+       <property name="text">
+        <string>capture image</string>
+       </property>
+      </widget>
+     </item>
      <item>
       <widget class="QSlider" name="horizontalSlider">
        <property name="orientation">

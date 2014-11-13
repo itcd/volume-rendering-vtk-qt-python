@@ -10,6 +10,7 @@ import sys
 import vtk
 from vtk.qt4.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtk.util.misc import vtkGetDataRoot
+from vtk.util.numpy_support import vtk_to_numpy
 import xml.etree.ElementTree as ET
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import QObject, pyqtSignal, pyqtSlot
@@ -25,13 +26,20 @@ def get_image_filename():
 
 def get_volume_filename(filename = None):
     if filename is None:
-	filename = str(QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a volume data set', '../data', "UNC MetaImage (*.mhd *.mha);; All Files (*)"))
+	filename = str(QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a volume data', '../data', "UNC MetaImage (*.mhd *.mha);; All Files (*)"))
 	if len(filename ) < 1:
 	    filename = "../data/nucleon.mhd"
     return filename
 
+def get_transfer_function_filename(filename = None):
+    if filename is None:
+	filename = str(QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a transfer function', '../transferfuncs', "Voreen transfer function (*.tfi);; All Files (*)"))
+	if len(filename ) < 1:
+	    filename = "../transferfuncs/nucleon.tfi"
+    return filename
+
 # Capture the display and place in a tiff
-def CaptureImage(renWin):
+def capture_image(renWin):
     w2i = vtk.vtkWindowToImageFilter()
     #writer = vtk.vtkTIFFWriter()
     writer = vtk.vtkPNGWriter()
@@ -76,6 +84,7 @@ class MyMainWindow(QtGui.QMainWindow):
         # Create the reader for the data
         reader = vtk.vtkMetaImageReader()
         reader.SetFileName(volume_filename)
+	self.reader = reader
         
         # The property describes how the data will look
         volumeProperty = vtk.vtkVolumeProperty()
@@ -98,17 +107,34 @@ class MyMainWindow(QtGui.QMainWindow):
         self.ren.SetBackground(1, 1, 1)
         #self.renWin.SetSize(600, 600)
         #self.renWin.Render()
-         
         self.iren.Initialize()
         #self.iren.Start()
-        
         check_gl_version_supported(self.renWin)
-
         self.ui.show()
-        CaptureImage(self.renWin)
 
     @pyqtSlot()
-    def on_pushButton_clicked(self):
+    def on_captureImageButton_clicked(self):
+	capture_image(self.renWin)
+
+    @pyqtSlot()
+    def on_toNumpyButton_clicked(self):
+	window = self.vtkWidget.GetRenderWindow()
+	vtk_win_im = vtk.vtkWindowToImageFilter()
+	vtk_win_im.SetInput(window)
+	vtk_win_im.Update()
+	#vtk_image = vtk_win_im.GetOutput()
+	vtk_image = self.reader.GetOutput()
+	height, width, depth = vtk_image.GetDimensions()
+	vtk_array = vtk_image.GetPointData().GetScalars()
+	components = vtk_array.GetNumberOfComponents()
+	text = "height=%d width=%d depth=%d components=%d" % (height, width, depth, components)
+	print text
+	arr = vtk_to_numpy(vtk_array).reshape(height, width, depth)
+	print arr
+	arr.tofile("../nucleon.raw")
+
+    @pyqtSlot()
+    def on_loadDataButton_clicked(self):
         print "on_pushButton_clicked"
         
         path, ok = QtGui.QInputDialog.getText(self.ui, 'Input Dialog', 'Enter path of data set:', QtGui.QLineEdit.Normal, r'D:\_uchar\vortex')
@@ -134,6 +160,55 @@ class MyMainWindow(QtGui.QMainWindow):
         self.model.clear()
         self.model.appendColumn(list1)
         self.ui.listView.setModel(self.model)
+	
+    def open_another_volume_and_tf(self, volume_filename, tf_filename):
+	self.ui.setWindowTitle(volume_filename)
+	
+	opacityTransferFunction, colorTransferFunction = load_transfer_function(tf_filename)
+	plot_tf(opacityTransferFunction, colorTransferFunction)	
+  
+	# Create the reader for the data
+	reader = vtk.vtkMetaImageReader()
+	reader.SetFileName(volume_filename)
+	self.reader = reader
+	
+	# The property describes how the data will look
+	volumeProperty = vtk.vtkVolumeProperty()
+	volumeProperty.SetColor(colorTransferFunction)
+	volumeProperty.SetScalarOpacity(opacityTransferFunction)
+	volumeProperty.ShadeOn()
+	volumeProperty.SetInterpolationTypeToLinear()
+	
+	# for vtkGPUVolumeRayCastMapper
+	volumeMapper = vtk.vtkGPUVolumeRayCastMapper()
+	volumeMapper.SetInputConnection(reader.GetOutputPort())
+	
+	# The volume holds the mapper and the property and
+	# can be used to position/orient the volume
+	volume = vtk.vtkVolume()
+	volume.SetMapper(volumeMapper)
+	volume.SetProperty(volumeProperty)
+	
+	self.ren = vtk.vtkRenderer()
+	self.ren.AddVolume(volume)
+	self.ren.SetBackground(1, 1, 1)
+	
+	window = self.vtkWidget.GetRenderWindow()
+	collection = window.GetRenderers()
+	item = collection.GetNextItem()
+	while item is not None:
+	    window.RemoveRenderer(item)
+	    item = collection.GetNextItem()
+	window.AddRenderer(self.ren)
+	window.Render()
+	self.iren.Initialize()
+
+    @pyqtSlot()
+    def on_actionOpen_volume_triggered(self):
+	volume_filename = get_volume_filename()
+	tf_filename = get_transfer_function_filename()
+	print volume_filename, tf_filename
+	self.open_another_volume_and_tf(volume_filename, tf_filename)
 
     @pyqtSlot(int)
     def on_horizontalSlider_valueChanged(self, value):
@@ -181,45 +256,7 @@ class MyMainWindow(QtGui.QMainWindow):
         volume_filename = path + item
 	tf_filename = path + item.replace('.mhd', '.tfi')
         print volume_filename, tf_filename
-        self.ui.setWindowTitle(volume_filename)
-	
-        opacityTransferFunction, colorTransferFunction = load_transfer_function(tf_filename)
-        plot_tf(opacityTransferFunction, colorTransferFunction)	
-  
-        # Create the reader for the data
-        reader = vtk.vtkMetaImageReader()
-        reader.SetFileName(volume_filename)
-	
-        # The property describes how the data will look
-        volumeProperty = vtk.vtkVolumeProperty()
-        volumeProperty.SetColor(colorTransferFunction)
-        volumeProperty.SetScalarOpacity(opacityTransferFunction)
-        volumeProperty.ShadeOn()
-        volumeProperty.SetInterpolationTypeToLinear()
-	
-        # for vtkGPUVolumeRayCastMapper
-        volumeMapper = vtk.vtkGPUVolumeRayCastMapper()
-        volumeMapper.SetInputConnection(reader.GetOutputPort())
-        
-        # The volume holds the mapper and the property and
-        # can be used to position/orient the volume
-        volume = vtk.vtkVolume()
-        volume.SetMapper(volumeMapper)
-        volume.SetProperty(volumeProperty)
-	
-	self.ren = vtk.vtkRenderer()
-	self.ren.AddVolume(volume)
-	self.ren.SetBackground(1, 1, 1)
-	
-	window = self.vtkWidget.GetRenderWindow()
-	collection = window.GetRenderers()
-	item = collection.GetNextItem()
-	while item is not None:
-	    window.RemoveRenderer(item)
-	    item = collection.GetNextItem()
-	window.AddRenderer(self.ren)
-	window.Render()
-	self.iren.Initialize()
+	self.open_another_volume_and_tf(volume_filename, tf_filename)
 
 if __name__ == "__main__":
     print sys.argv[0]
