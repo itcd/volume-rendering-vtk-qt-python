@@ -16,7 +16,14 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-def load_transfer_function_by_filename(filename):
+def get_transfer_function_filename(filename = None):
+    if filename is None:
+	filename = str(QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a transfer function', '../transferfuncs', "Voreen transfer function (*.tfi);; All Files (*)"))
+	if len(filename ) < 1:
+	    filename = "../transferfuncs/nucleon.tfi"
+    return filename
+
+def load_transfer_function(filename):
     tree = ET.parse(filename)
     root = tree.getroot()
     
@@ -62,13 +69,6 @@ def load_transfer_function_by_filename(filename):
     
     return opacityTransferFunction, colorTransferFunction
 
-def load_transfer_function(filename = None):
-    if filename is None:
-        filename = str(QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a transfer function', '../transfer_function', "Voreen transfer functions (*.tfi);; All Files (*)"))
-        if len(filename ) < 1:
-            filename = "../transferfuncs/nucleon.tfi"
-    return load_transfer_function_by_filename(filename)
-
 def plot_tf(opacityTransferFunction, colorTransferFunction):
     v4 = [0] * 4
     v6 = [0] * 6
@@ -100,6 +100,6 @@ if __name__ == "__main__":
     print sys.argv[0]
     print __file__
     app = QtGui.QApplication(sys.argv)
-    opacityTransferFunction, colorTransferFunction = load_transfer_function()
+    opacityTransferFunction, colorTransferFunction = load_transfer_function(get_transfer_function_filename("../transferfuncs/nucleon.tfi"))
     plot_tf(opacityTransferFunction, colorTransferFunction)
     sys.exit(app.exec_())

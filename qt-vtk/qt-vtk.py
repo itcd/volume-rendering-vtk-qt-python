@@ -31,13 +31,6 @@ def get_volume_filename(filename = None):
 	    filename = "../data/nucleon.mhd"
     return filename
 
-def get_transfer_function_filename(filename = None):
-    if filename is None:
-	filename = str(QtGui.QFileDialog.getOpenFileName(QtGui.QWidget(), 'Select a transfer function', '../transferfuncs', "Voreen transfer function (*.tfi);; All Files (*)"))
-	if len(filename ) < 1:
-	    filename = "../transferfuncs/nucleon.tfi"
-    return filename
-
 # Capture the display and place in a tiff
 def capture_image(renWin):
     w2i = vtk.vtkWindowToImageFilter()
@@ -78,13 +71,18 @@ class MyMainWindow(QtGui.QMainWindow):
         self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()   
         
 	volume_filename = get_volume_filename("../data/nucleon.mhd")
-        opacityTransferFunction, colorTransferFunction = load_transfer_function("../transferfuncs/nucleon.tfi")
+	tf_filename = get_transfer_function_filename("../transferfuncs/nucleon.tfi")
+        opacityTransferFunction, colorTransferFunction = load_transfer_function(tf_filename)
         plot_tf(opacityTransferFunction, colorTransferFunction)
         
         # Create the reader for the data
         reader = vtk.vtkMetaImageReader()
         reader.SetFileName(volume_filename)
-	self.reader = reader
+
+	# store the filenames and vtk reader for later use
+	self.volume_filename = volume_filename
+	self.tf_filename = tf_filename
+	self.reader = reader	
         
         # The property describes how the data will look
         volumeProperty = vtk.vtkVolumeProperty()
@@ -118,10 +116,10 @@ class MyMainWindow(QtGui.QMainWindow):
 
     @pyqtSlot()
     def on_toNumpyButton_clicked(self):
-	window = self.vtkWidget.GetRenderWindow()
-	vtk_win_im = vtk.vtkWindowToImageFilter()
-	vtk_win_im.SetInput(window)
-	vtk_win_im.Update()
+	#window = self.vtkWidget.GetRenderWindow()
+	#vtk_win_im = vtk.vtkWindowToImageFilter()
+	#vtk_win_im.SetInput(window)
+	#vtk_win_im.Update()
 	#vtk_image = vtk_win_im.GetOutput()
 	vtk_image = self.reader.GetOutput()
 	height, width, depth = vtk_image.GetDimensions()
@@ -129,9 +127,19 @@ class MyMainWindow(QtGui.QMainWindow):
 	components = vtk_array.GetNumberOfComponents()
 	text = "height=%d width=%d depth=%d components=%d" % (height, width, depth, components)
 	print text
-	arr = vtk_to_numpy(vtk_array).reshape(height, width, depth)
-	print arr
-	arr.tofile("../nucleon.raw")
+	
+	# get filenames for .mhd and .raw files
+	numpy_array = vtk_to_numpy(vtk_array).reshape(height, width, depth)
+	mhd_filename = self.extract_filename_from_path(self.volume_filename)
+	raw_filename = mhd_filename.replace('.mhd', '.raw')
+	path = '../'
+	
+	# write data to .mhd and .raw files
+	numpy_array.tofile(path + raw_filename)
+	with open (self.volume_filename, 'r') as myfile, open(path + mhd_filename, 'w') as new:
+	    data = myfile.readlines()
+	    for line in data:
+		new.write(line)
 
     @pyqtSlot()
     def on_loadDataButton_clicked(self):
@@ -170,6 +178,10 @@ class MyMainWindow(QtGui.QMainWindow):
 	# Create the reader for the data
 	reader = vtk.vtkMetaImageReader()
 	reader.SetFileName(volume_filename)
+	
+	# store the filenames and vtk reader for later use
+	self.volume_filename = volume_filename
+	self.tf_filename = tf_filename
 	self.reader = reader
 	
 	# The property describes how the data will look
@@ -228,13 +240,21 @@ class MyMainWindow(QtGui.QMainWindow):
     @pyqtSlot('QModelIndex')
     def on_listView_activated(self, index):
         print 'on_listView_activated'
-
-    def append_path_separator(self, text):
-        result_string = text
+	
+    def extract_filename_from_path(self, text):
         separator1 = '/'
         separator2 = '\\'
-        index1 = result_string.rfind(separator1)
-        index2 = result_string.rfind(separator2)
+        index1 = text.rfind(separator1)
+        index2 = text.rfind(separator2)
+	index = max(index1, index2)
+	return text[index+1:]
+
+    def append_path_separator(self, text):
+        separator1 = '/'
+        separator2 = '\\'
+        index1 = text.rfind(separator1)
+        index2 = text.rfind(separator2)
+	result_string = text
         if index2 == -1:
             separator = separator1
         else:
@@ -245,7 +265,6 @@ class MyMainWindow(QtGui.QMainWindow):
             index = max(index1, index2)
             if index < len(result_string) - 1:
                 result_string = result_string + separator
-        #print index1, index2, result_string
         return result_string
 
     @pyqtSlot('QModelIndex')
